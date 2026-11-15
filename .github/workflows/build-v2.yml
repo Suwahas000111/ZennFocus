@@ -13,7 +13,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Create Android Project Structure & Configs
+      - name: Setup Project Structure & Build Files
         run: |
           mkdir -p app/src/main/java/com/zenfocus/app
           mkdir -p app/src/main
@@ -22,11 +22,9 @@ jobs:
           if [ -f "FocusTimerService.kt" ]; then mv FocusTimerService.kt app/src/main/java/com/zenfocus/app/; fi
           if [ -f "AndroidManifest.xml" ]; then mv AndroidManifest.xml app/src/main/; fi
 
-          # Create settings.gradle
           echo 'rootProject.name = "ZenFocus"' > settings.gradle
           echo "include ':app'" >> settings.gradle
 
-          # Create root build.gradle
           cat << 'EOF' > build.gradle
           buildscript {
               repositories {
@@ -34,8 +32,8 @@ jobs:
                   mavenCentral()
               }
               dependencies {
-                  classpath 'com.android.tools.build:gradle:8.2.2'
-                  classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.22"
+                  classpath 'com.android.tools.build:gradle:8.1.4'
+                  classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.20"
               }
           }
           allprojects {
@@ -46,11 +44,10 @@ jobs:
           }
           EOF
 
-          # Create app/build.gradle
           cat << 'EOF' > app/build.gradle
           plugins {
               id 'com.android.application'
-              id 'org.jetbrains.kotlin.android'
+              id 'kotlin-android'
           }
 
           android {
@@ -90,11 +87,12 @@ jobs:
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '8.10.2'
 
       - name: Build Debug APK
-        run: gradle assembleDebug
+        run: |
+          gradle wrapper --gradle-version 8.4
+          chmod +x gradlew
+          ./gradlew assembleDebug --stacktrace
 
       - name: Upload ZenFocus APK
         uses: actions/upload-artifact@v4
