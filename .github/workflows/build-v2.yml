@@ -13,14 +13,74 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Organize Android Project Structure
+      - name: Create Android Project Structure & Configs
         run: |
           mkdir -p app/src/main/java/com/zenfocus/app
           mkdir -p app/src/main
-          
+
           if [ -f "MainActivity.kt" ]; then mv MainActivity.kt app/src/main/java/com/zenfocus/app/; fi
           if [ -f "FocusTimerService.kt" ]; then mv FocusTimerService.kt app/src/main/java/com/zenfocus/app/; fi
           if [ -f "AndroidManifest.xml" ]; then mv AndroidManifest.xml app/src/main/; fi
+
+          # Create settings.gradle
+          echo 'rootProject.name = "ZenFocus"' > settings.gradle
+          echo "include ':app'" >> settings.gradle
+
+          # Create root build.gradle
+          cat << 'EOF' > build.gradle
+          buildscript {
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+              dependencies {
+                  classpath 'com.android.tools.build:gradle:8.2.2'
+                  classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.22"
+              }
+          }
+          allprojects {
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+          EOF
+
+          # Create app/build.gradle
+          cat << 'EOF' > app/build.gradle
+          plugins {
+              id 'com.android.application'
+              id 'org.jetbrains.kotlin.android'
+          }
+
+          android {
+              namespace 'com.zenfocus.app'
+              compileSdk 34
+
+              defaultConfig {
+                  applicationId "com.zenfocus.app"
+                  minSdk 24
+                  targetSdk 34
+                  versionCode 1
+                  versionName "1.0"
+              }
+
+              compileOptions {
+                  sourceCompatibility JavaVersion.VERSION_17
+                  targetCompatibility JavaVersion.VERSION_17
+              }
+
+              kotlinOptions {
+                  jvmTarget = '17'
+              }
+          }
+
+          dependencies {
+              implementation 'androidx.core:core-ktx:1.12.0'
+              implementation 'androidx.appcompat:appcompat:1.6.1'
+              implementation 'com.google.android.material:material:1.11.0'
+          }
+          EOF
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -30,14 +90,11 @@ jobs:
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
-
-      - name: Initialize Gradle Wrapper
-        run: |
-          gradle wrapper --gradle-version 8.10.2
-          chmod +x gradlew
+        with:
+          gradle-version: '8.10.2'
 
       - name: Build Debug APK
-        run: ./gradlew assembleDebug
+        run: gradle assembleDebug
 
       - name: Upload ZenFocus APK
         uses: actions/upload-artifact@v4
